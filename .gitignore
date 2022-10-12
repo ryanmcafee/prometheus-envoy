@@ -1,1 +1,2 @@
-cmd/prometheus-envoy/prometheus-envoy
+bin/prometheus-envoy
+vendor/
