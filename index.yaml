@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  prometheus-envoy:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2022-10-12T00:57:32.135037298Z"
+    description: A Helm chart for Kubernetes
+    digest: d39f7bdd993b2dc69e57ba02c86a0454d4ddb52c5df7e8a3159f229cb852bf28
+    name: prometheus-envoy
+    type: application
+    urls:
+    - https://github.com/ryanmcafee/prometheus-envoy/releases/download/prometheus-envoy-helm-chart-0.1.1/prometheus-envoy-0.1.1.tgz
+    version: 0.1.1
+generated: "2022-10-12T00:57:32.135043598Z"
