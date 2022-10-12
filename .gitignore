@@ -1,2 +1,2 @@
-compiled/prometheus-envoy
+bin/prometheus-envoy
 vendor/

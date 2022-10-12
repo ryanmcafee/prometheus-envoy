@@ -1,103 +1,48 @@
-name: CI
-
-on: [push, pull_request]
-env:
-  CHART_NAME: "prometheus-envoy"
-  CHART_PATH: "deploy/kubernetes/helm/prometheus-envoy"
+name: publish
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
 jobs:
-  helm-chart-test:
-    runs-on: ubuntu-latest 
-    name: Test Helm Chart
-    strategy:
-      matrix:
-        kubernetes: [1.19.11, 1.20.7, 1.21.1, 1.22.0, 1.23.0]
-    steps:
-    - name: Check out code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-        ref: ${{github.event.pull_request.head.sha}}
-    - name: Setup Ephemeral Kubernetes Testing Cluster
-      uses: engineerd/setup-kind@v0.5.0
-      with:
-        version: "v0.11.1"    
-    # Set Up Helm
-    - name: Set up Helm
-      uses: azure/setup-helm@v3.3
-      with:
-        version: v3.10.0
-    # Lint
-    - name: Helm Lint
-      run: |
-        helm lint ${CHART_PATH}
-    # Dry run to ensure that manifests are generated successfully 
-    - name: Dry Run Chart
-      run: |
-        helm install ${CHART_NAME} ${CHART_PATH} -f ${CHART_PATH}/values.yaml -n helm-chart-pipeline-test --dry-run --debug
-    # package
-    - name: Helm Package
-      run: |
-        helm package ${CHART_PATH}
-    - name: Comment on PR
-      uses: mshick/add-pr-comment@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        message: '@${{ github.actor }} Validation Successful'
-        allow-repeats: false        
-
-  rolling-release-images:
-    # Only on main branch.
-    if: startsWith(github.ref, 'refs/heads/main')
-    env:
-      TAG_IMAGE_LATEST: "true"
-      PROD_IMAGE_NAME: ghcr.io/${GITHUB_REPOSITORY}
-      VERSION: ${GITHUB_SHA}
-    needs: [helm-chart-test]
-    name: Release images
+  build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Docker login
-        run: docker login ghcr.io -u ${{ github.actor }} -p "${{ secrets.GITHUB_TOKEN }}"
-      - name: Build and publish docker images
-        run: make build-publish-image-all
-
-  tagged-release-images:
-    # Only on tags.
-    if: startsWith(github.ref, 'refs/tags/')
-    env:
-      PROD_IMAGE_NAME: ghcr.io/${GITHUB_REPOSITORY}
-    needs: [helm-chart-test]
-    name: Tagged release images
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> ${GITHUB_ENV} # Sets VERSION env var.
-      - uses: actions/checkout@v3
-      - name: Docker login
-        run: docker login ghcr.io -u ${{ github.actor }} -p "${{ secrets.GITHUB_TOKEN }}"
-      - name: Build and publish docker images
-        run: make build-publish-image-all
-
-  tagged-release-binaries:
-    # Only on tags.
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: [helm-chart-test]
-    name: Tagged release binaries
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "VERSION=${GITHUB_REF#refs/*/}" >> ${GITHUB_ENV} # Sets VERSION env var.
-      - uses: actions/checkout@v3
-      - name: Build binaries
-        run: |
-          mkdir -p ./bin
-          chmod -R 0777 ./bin
-          make build-all
-      - name: Upload binaries
-        uses: xresloader/upload-to-github-release@v1.3.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
-          file: "bin/*"
-          tags: true
-          draft: true
+          fetch-depth: 2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/${GITHUB_REPOSITORY}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

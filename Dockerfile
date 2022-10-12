@@ -4,10 +4,10 @@ COPY go.mod ./
 COPY go.sum ./
 RUN go mod download
 COPY . ./
-RUN go build -o /compiled/prometheus-exporter ./
+RUN go build -o /bin/prometheus-exporter ./
 
 FROM alpine:3
 WORKDIR /
-COPY --from=build /compiled/prometheus-exporter /prometheus-envoy
+COPY --from=build /bin/prometheus-exporter /prometheus-envoy
 EXPOSE 2112
 ENTRYPOINT ["/prometheus-envoy"]

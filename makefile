@@ -12,8 +12,8 @@ go-vendor: go.mod go.sum
 
 .PHONY: build
 build: go-vendor main.go
-	mkdir -p compiled
-	go build -o compiled/prometheus-envoy
+	mkdir -p bin
+	go build -o bin/prometheus-envoy
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT)
@@ -22,7 +22,7 @@ lint: $(GOLANGCI_LINT)
 .PHONY: clean
 clean:
 	-rm -fr vendor
-	-rm -fr compiled
+	-rm -fr bin
 
 .PHONY: image
 image:

@@ -27,9 +27,8 @@ snmp_exporter tool.
 ## Building and running
 
 ```sh
-cd cmd/prometheus-envoy
-go build
-./prometheus-envoy -port 2112
+make build
+./bin/prometheus-envoy -port 2112
 ```
 
 ## License
