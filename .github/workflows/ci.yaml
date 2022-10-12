@@ -24,7 +24,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${GITHUB_REPOSITORY}
+          images: ryanmcafee/prometheus-envoy
           tags: |
             type=ref,event=branch
             type=ref,event=pr
